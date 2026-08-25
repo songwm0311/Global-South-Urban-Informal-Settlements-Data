@@ -94,10 +94,7 @@ Each regional dataset contains image samples and corresponding labels used for d
 
 These datasets support the construction of training and validation samples described in the machine-learning pipeline.
 
-
 3. Deep-learning Model and Training Codes
-
-The repository provides the complete workflow required to reproduce the informal-settlement mapping model.
 
 Model architecture
 
