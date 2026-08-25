@@ -94,6 +94,7 @@ Each regional dataset contains image samples and corresponding labels used for d
 
 These datasets support the construction of training and validation samples described in the machine-learning pipeline.
 
+
 3. Deep-learning Model and Training Codes
 
 The repository provides the complete workflow required to reproduce the informal-settlement mapping model.
@@ -136,6 +137,7 @@ The following files support model reproduction:
 config_all.py: model configuration and hyperparameter settings;
 dataloder_Pick.py: image patch loading and preprocessing;
 nameList.py: dataset organization and file management.
+
 4. Supporting Computational Functions
 
 The repository also includes supporting codes required for data processing and visualization.
@@ -144,6 +146,7 @@ loss/: loss functions used during model optimization;
 utils/: auxiliary functions for model training, prediction, and data processing;
 PLT_imshow.py: visualization of input images and model outputs;
 plt_data.py: data visualization and plotting procedures.
+
 5. Documentation and Execution Records
 README.md provides repository descriptions, usage instructions, and workflow information.
 nohup.out contains execution logs generated during model runs.
