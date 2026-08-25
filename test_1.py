@@ -41,14 +41,14 @@ def change_device(data):
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '3,4'
 model = Unet3Plus.UNet_3Plus(in_channels=13, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True)
-model.load_state_dict(torch.load('/mnt/PRESKY/user/cuijiawen/jm/codes/PT/Unet3Plus/best_model.pt'))##
+model.load_state_dict(torch.load('/mnt/codes/PT/Unet3Plus/best_model.pt'))##
 model.eval()
 model = torch.nn.DataParallel(model).cuda()
 
 nn = 1
-outpath = '/mnt/PRESKY/user/cuijiawen/jm/codes/out_test/'
+outpath = '/mnt/codes/out_test/'
 
-filen = '/mnt/PRESKY/user/cuijiawen/jm/testdata.mat'
+filen = '/mnt/testdata.mat'
 
 data = sio.loadmat(filen)
 data = (data[list(data.keys())[3]]).astype(float)
@@ -67,7 +67,7 @@ data_nor1[:,data_nor.shape[1]-20:data_nor.shape[1],:] = np.fliplr(data_nor1[:,da
 
 
 data_in1 = np.transpose(data_nor1, (2, 0, 1))
-# sio.savemat('/mnt/PRESKY/user/cuijiawen/jm/codes/tt.mat', {'in': data_in1})
+# sio.savemat('/mnt/codes/tt.mat', {'in': data_in1})
 
 data_normal = torch.tensor(np.tile(data_in1,(1,1,1,1)))
 data_normal = data_normal.type(torch.float32).cuda(non_blocking=True)
@@ -150,7 +150,7 @@ sio.savemat(outname1, {'predict': outdata[20:nl1-20,20:ns1-20]})
 #     y_r = r_nor(y_r)                          ##反归一化label
 #     y_p[mask1 == 0] = 0
 #     y_r[mask1 == 0] = 0
-#     outpath = '/mnt/PRESKY/user/cuijiawen/paper/'
+#     outpath = '/mnt/paper/'
 #
 #     # for i in range(y_p.shape[0]):
 #     #     output = mhs_names_test[nn]
