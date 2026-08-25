@@ -41,14 +41,14 @@ def change_device(data):
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '3,4'
 model = Unet3Plus.UNet_3Plus(in_channels=13, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True)
-model.load_state_dict(torch.load('/mnt/PRESKY/user/cuijiawen/jm/codes/PT/Unet3Plus/best_model.pt'))##
+model.load_state_dict(torch.load('/mnt/codes/PT/Unet3Plus/best_model.pt'))##
 model.eval()
 model = torch.nn.DataParallel(model).cuda()
 
 nn = 1
-outpath = '/mnt/PRESKY/user/cuijiawen/jm/codes/out_test/'
+outpath = '/mnt/codes/out_test/'
 
-filen = '/mnt/PRESKY/user/cuijiawen/jm/Mumbai-all.mat'
+filen = '/mnt/Mumbai-all.mat'
 
 data = sio.loadmat(filen)
 data = (data[list(data.keys())[3]]).astype(float)
