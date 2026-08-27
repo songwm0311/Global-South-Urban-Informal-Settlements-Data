@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
+"""Loss selection for model training."""
+
+from .segmentation import L1Loss
+from .segmentation import LogCoshLoss
+from .segmentation import MSELoss
+from .segmentation import WeightMSELoss
+from .segmentation import msssimLoss
 
 
-from .Regression import MSELoss
-from .Regression import L1Loss
-from .Regression import WeightMSELoss
-from .Regression import LogCoshLoss
-from .Regression import msssimLoss
-
-
-
-LossSelector = {'mseloss': MSELoss,
-                'l1loss': L1Loss,
-                'weightmseloss': WeightMSELoss,
-                'logcoshloss':LogCoshLoss,
-                'msssimloss':msssimLoss}
+LossSelector = {
+    "mseloss": MSELoss,
+    "l1loss": L1Loss,
+    "weightmseloss": WeightMSELoss,
+    "logcoshloss": LogCoshLoss,
+    "msssimloss": msssimLoss,
+}

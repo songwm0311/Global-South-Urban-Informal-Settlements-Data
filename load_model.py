@@ -1,93 +1,98 @@
-import torch
+"""Load a trained segmentation model and run inference on patch datasets."""
+
 import argparse
-import os
+from pathlib import Path
+
 import scipy.io as sio
-from torch.utils.data import DataLoader, Dataset, random_split
-from os.path import join
-from os import listdir
-import shutil
-import time
-import random
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.parallel
-import torch.backends.cudnn as cudnn
-import torch.optim as optim
 from tqdm import tqdm
-# import time
-from config_all_pj import test_loader
-# from models.UnetFamily.Unet import UNet
-# from models.UnetFamily.Unet2PLUS import UNet2plus
-from models.UnetFamily.Unet3PLUS import Unet3Plus
-from plt_data import *
-# from models.UnetFamily.U2NET import u2net
-# from models.UnetFamily.MSUNET import msunet
 
-def cal_mse(pre,lab,mask):
-    pre    = pre[:,0,:,:]*mask
-    label  = label[:,0,:,:]*mask
-    dt     = abs(pre-label)
-    dt_1   = dt.sum(axis=2)
-    mask_1 = mask.sum(axis=2)
-    return dt_1,mask_1
-
-def r_nor(data):#反归一化
-    out = data*0.0
-    for k in range(data.shape[0]):
-        for i in range(data.shape[1]):
-            for j in range(data.shape[2]):
-                tt = data[k,i,j]
-                out[k,i,j] = math.exp(tt*np.log(18)) - 1
-    return out
-
-def change_device(data):
-    #GPU数据转到CPU
-    data = data.cpu()
-    out = data.detach().numpy()
-    return out
-
-def cal_re(data,label,mask):#relative error--->abs(A-B)/B
-    #计算相对误差
-    data  = r_nor(data[:,0,:,:])
-    label = r_nor(label[:,0,:,:])
-    mask  = mask[:,0,:,:]
-    re  = (abs(data-label)/label)*mask
-    return re.sum(axis=0),mask.sum(axis=0)
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '3,4'
-model = Unet3Plus.UNet_3Plus(in_channels=5, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True)
-# model.load_state_dict(torch.load('/mnt/Unet/ssimloss0905_band1to5_0908.pt'))
-model.load_state_dict(torch.load('/mnt/Unet/mseloss1011_band5.pt'))
-model.eval()
-model = torch.nn.DataParallel(model).cuda()  # 多卡运行
-
-outpath = '/mnt/predata/pj/world'
-loader = test_loader
-
-for batch_idx, (factor_Input,  humidity, mask) in enumerate(tqdm(loader)):
-    factor_Input,  humidity,  mask = factor_Input.float().cuda(non_blocking=True), \
-                                                          humidity.type(torch.float32).cuda(non_blocking=True), \
-                                                          mask.cuda(non_blocking=True)
-    print(batch_idx)
-    outputs = model(factor_Input)
-    y_p   = change_device(outputs[:,0,:,:])   ##3D
-    y_r   = change_device(humidity[:,0,:,:])  ##3D
-    mask1 = change_device(mask[:,0,:,:])      ##3D
-    ff = change_device(factor_Input)
-    y_p = r_nor(y_p)                          ##反归一化predict
-    y_r = r_nor(y_r)                          ##反归一化label
-    # y_p[mask1 == 0] = np.nan
-    # y_r[mask1 == 0] = np.nan
-
-    # outname1 = outpath + '/bt1-' + str(batch_idx+1) + '.mat'
-    # outname2 = outpath + '/predict1-' + str(batch_idx+1) + '.mat'
-    # outname3 = outpath + '/mask1-' + str(batch_idx+1) + '.mat'
-    #
-    # sio.savemat(outname1, {'bt': ff})
-    # sio.savemat(outname2, {'predict': y_p})
-    # sio.savemat(outname3, {'mask': mask1})
+from config_all import build_loaders
+from model_factory import MODEL_NAMES, build_model, primary_output
 
 
+def resolve_device(requested):
+    if requested == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(requested)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA was requested but is not available")
+    return device
 
 
+def load_checkpoint(model, checkpoint, device):
+    """Load plain or wrapped state dictionaries, including DataParallel keys."""
+    state = torch.load(checkpoint, map_location=device)
+    if isinstance(state, dict) and "state_dict" in state:
+        state = state["state_dict"]
+    if not isinstance(state, dict):
+        raise TypeError("Checkpoint must contain a PyTorch state dictionary")
+    state = {
+        key[7:] if key.startswith("module.") else key: value
+        for key, value in state.items()
+    }
+    model.load_state_dict(state)
+    return model
+
+
+def predict_loader(model, loader, device, output_dir, threshold=0.65):
+    """Save prediction, label, and validity mask for every evaluation batch."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    model.eval()
+
+    with torch.no_grad():
+        for batch_index, (inputs, labels, mask) in enumerate(
+            tqdm(loader, desc="PREDICT"), start=1
+        ):
+            inputs = inputs.float().to(device, non_blocking=True)
+            probabilities = primary_output(model(inputs))
+            predictions = (probabilities >= threshold).to(torch.uint8)
+            sio.savemat(
+                output_dir / "batch-{:04d}.mat".format(batch_index),
+                {
+                    "prediction": predictions.cpu().numpy(),
+                    "probability": probabilities.cpu().numpy(),
+                    "label": labels.numpy(),
+                    "mask": mask.numpy(),
+                },
+            )
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="Run patch-based informal-settlement inference"
+    )
+    parser.add_argument("--checkpoint", required=True, help="Path to model weights")
+    parser.add_argument("--data-dir", default="jm", help="Directory with x_train/ and y_train/")
+    parser.add_argument("--output-dir", default="predictions")
+    parser.add_argument("--model", default="Unet3Plus", choices=MODEL_NAMES)
+    parser.add_argument("--in-channels", default=13, type=int)
+    parser.add_argument("--threshold", default=0.65, type=float)
+    parser.add_argument("--batch-size", default=4, type=int)
+    parser.add_argument("--num-workers", default=4, type=int)
+    parser.add_argument("--train-count", default=1000, type=int)
+    parser.add_argument("--val-count", default=200, type=int)
+    parser.add_argument("--test-count", default=200, type=int)
+    parser.add_argument("--device", default="auto")
+    return parser
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    device = resolve_device(args.device)
+    _, _, test_loader = build_loaders(
+        data_dir=args.data_dir,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        train_count=args.train_count,
+        val_count=args.val_count,
+        test_count=args.test_count,
+    )
+    model = build_model(args.model, in_channels=args.in_channels).to(device)
+    load_checkpoint(model, args.checkpoint, device)
+    predict_loader(model, test_loader, device, args.output_dir, args.threshold)
+
+
+if __name__ == "__main__":
+    main()

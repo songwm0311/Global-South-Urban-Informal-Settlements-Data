@@ -1,5 +1,4 @@
 # MS_SSIM implementation from https://github.com/VainF/pytorch-msssim
-# MSSSIM loss from https://github.com/spcl/deep-weather/blob/48748598294f02acbe029dac543e2abcb5285c09/Uncertainty_Quantification/Pytorch/models.py
 
 import warnings
 
@@ -306,4 +305,3 @@ class MSSSIMLoss(torch.nn.Module):
 
     def forward(self, x, target):
         return 1.0 - self.msssim(x, target)
-

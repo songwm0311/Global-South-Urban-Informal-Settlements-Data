@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+nohup.out
+
+# Local training and inference outputs
+PT/
+result/
+predictions/
+runs/
+
+# Local environments and editor files
+.venv/
+.idea/
+.vscode/

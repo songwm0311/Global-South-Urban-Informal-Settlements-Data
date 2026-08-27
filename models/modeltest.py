@@ -1,20 +1,37 @@
+"""Smoke-test a bundled segmentation architecture with a synthetic input."""
+
+import argparse
+
 import torch
-from TONGH.models.UnetFamily.Unet import UNet
-from TONGH.models.UnetFamily.U2NET import u2net
-from TONGH.models.UnetFamily.Unet3PLUS import Unet3Plus
-from  TONGH.models.UnetFamily.MSUNET import msunet
-from torchsummary import summary
-def main():
 
-    in_batch, inchannel, in_h, in_w = 4, 5, 128, 128
-    x = torch.randn(in_batch, inchannel, in_h, in_w).cuda()
-    net= msunet.U_Net(img_ch=5, output_ch=1).cuda()
-    out = net(x)
-    summary(net, (5, 128, 128))
-    print(net)
-    # for i in range(psi1.shape[0]):
-    #     print(psi1[i][0].detach().cpu().unsqueeze(dim=0).shape)
-    print('输出：',out.shape)
+from model_factory import MODEL_NAMES, build_model, primary_output
 
-if __name__ == '__main__':
-   main()
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--model", default="Unet3Plus", choices=MODEL_NAMES)
+    parser.add_argument("--in-channels", default=13, type=int)
+    parser.add_argument("--batch-size", default=1, type=int)
+    parser.add_argument("--height", default=128, type=int)
+    parser.add_argument("--width", default=128, type=int)
+    parser.add_argument("--device", default="cpu")
+    args = parser.parse_args(argv)
+
+    device = torch.device(args.device)
+    model = build_model(args.model, in_channels=args.in_channels).to(device)
+    inputs = torch.randn(
+        args.batch_size,
+        args.in_channels,
+        args.height,
+        args.width,
+        device=device,
+    )
+    with torch.no_grad():
+        output = primary_output(model(inputs))
+    print("input:", tuple(inputs.shape))
+    print("output:", tuple(output.shape))
+    print("parameters:", sum(parameter.numel() for parameter in model.parameters()))
+
+
+if __name__ == "__main__":
+    main()

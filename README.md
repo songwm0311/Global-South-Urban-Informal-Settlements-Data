@@ -114,48 +114,50 @@ implements model training, including model optimization, parameter updating, and
 
 Model testing and inference
 
-The scripts:
-
-test_1.py
-test_2.py
-
-are used for model evaluation and prediction generation.
-
-The script:
-
-load_model.py
-
-provides functions for loading trained models and performing inference.
+`load_model.py` loads a trained checkpoint and runs inference on the held-out
+patch dataset. `predict_raster.py` performs overlap-tile inference for one
+multi-band MATLAB raster and saves both probabilities and binary predictions.
 
 Configuration and preprocessing
 
 The following files support model reproduction:
 
-config_all.py: model configuration and hyperparameter settings;
-dataloder_Pick.py: image patch loading and preprocessing;
-nameList.py: dataset organization and file management.
+`config_all.py`: deterministic train/validation/test loader construction;
+`dataloder_Pick.py`: paired image-patch and label loading;
+`model_factory.py`: shared model construction for training and inference.
 
 4. Supporting Computational Functions
 
 The repository also includes supporting codes required for data processing and visualization.
 
-loss/: loss functions used during model optimization;
-utils/: auxiliary functions for model training, prediction, and data processing;
-PLT_imshow.py: visualization of input images and model outputs;
-plt_data.py: data visualization and plotting procedures.
+`loss/`: masked loss functions used during model optimization;
+`utils/`: auxiliary functions for model training, prediction, and data processing.
 
-5. Documentation and Execution Records
-README.md provides repository descriptions, usage instructions, and workflow information.
-nohup.out contains execution logs generated during model runs.
-__pycache__/ contains automatically generated Python cache files.
-Reproducibility Statement
+5. Basic usage
 
-The repository provides the essential data products and computational workflow required to reproduce the main analyses of this study, including:
+The scripts no longer contain machine-specific data paths or fixed GPU IDs.
+Examples:
 
-generation of urban informal-settlement predictions;
-estimation of city-level settlement extent and volume;
-Monte Carlo Dropout-based uncertainty quantification;
-construction of VIS1, VIS2, VIS3, and UISVI indicators;
-regional comparison of informal-settlement vulnerability patterns.
+```bash
+python -m pip install -r requirements.txt
+python train.py --data-dir jm --model Unet3Plus --in-channels 13
+python load_model.py --data-dir jm --checkpoint result/checkpoints/Unet3Plus/best_model.pt
+python predict_raster.py --input city.mat --checkpoint best_model.pt --output prediction.mat
+```
 
-Due to licensing restrictions, original satellite imagery and some third-party auxiliary datasets are not redistributed. However, their data sources, preprocessing procedures, and analytical methods are documented in the manuscript and Supporting Information.
+`data-dir` must contain matching `x_train/` and `y_train/` directories. Each
+MATLAB file must contain one data array, and input and label filenames must
+match. Run `python <script>.py --help` for all available options.
+
+The GitHub Actions workflow performs a syntax check on every push and pull
+request. Generated Python caches, execution logs, checkpoints, and prediction
+outputs are excluded from version control.
+
+## Reproducibility Statement
+
+The repository makes the study's released data products, regional sample
+archives, and core segmentation training and inference workflow available. The
+derived spreadsheet includes the city-level extent, volume, uncertainty,
+VIS1–VIS3, and UISVI results used in the analyses. Data sources, preprocessing
+procedures, uncertainty propagation, and vulnerability-index construction are
+documented in the manuscript and Supporting Information.
