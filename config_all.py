@@ -5,7 +5,7 @@ from os.path import join
 from os import listdir
 #该路径下所有文件名
 
-x_dir = '/mnt/PRESKY/user/cuijiawen/jm/x_train/'
+x_dir = 'x_train/'
 all_names = sorted([x for x in listdir(x_dir) if x.endswith(".mat")])
 
 print("###############################################################################################################################")
@@ -13,7 +13,7 @@ train_namelist = all_names[0:1000]
 val_namelist = all_names[1000:1200]
 test_namelist = all_names[1200:1400]
 
-dir = '/mnt/PRESKY/user/cuijiawen/jm/'
+dir = 'jm/'
 DIRLIST = ['x_train/','y_train/']
 
 datas_train = DatasetFromFolder(train_namelist, dir, DIRLIST)
