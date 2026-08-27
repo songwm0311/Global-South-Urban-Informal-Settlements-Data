@@ -57,12 +57,12 @@ def cal_re(data,label,mask):#relative error--->abs(A-B)/B
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '3,4'
 model = Unet3Plus.UNet_3Plus(in_channels=5, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True)
-# model.load_state_dict(torch.load('/mnt/PRESKY/user/cuijiawen/TT/PT/Unet3Plus/ssimloss0905_band1to5_0908.pt'))
-model.load_state_dict(torch.load('/mnt/PRESKY/user/cuijiawen/TT/PT/Unet3Plus/mseloss1011_band5.pt'))
+# model.load_state_dict(torch.load('/mnt/Unet/ssimloss0905_band1to5_0908.pt'))
+model.load_state_dict(torch.load('/mnt/Unet/mseloss1011_band5.pt'))
 model.eval()
 model = torch.nn.DataParallel(model).cuda()  # 多卡运行
 
-outpath = '/mnt/PRESKY/user/cuijiawen/predata/pj/world'
+outpath = '/mnt/predata/pj/world'
 loader = test_loader
 
 for batch_idx, (factor_Input,  humidity, mask) in enumerate(tqdm(loader)):
