@@ -1,161 +1,115 @@
-# File Contents
+# Global South Urban Informal Settlements — processing code
 
-The repository “Global-South-Urban-Informal-Settlements-Data” provides the datasets, deep-learning model implementation, and analytical codes used to generate global urban informal-settlement maps and assess vulnerability patterns across the Global South.
+This code-only deposit contains the U-Net preprocessing, training, inference,
+nested out-of-fold calibration, independent evaluation, UISI/GLCM feature
+calculation, and visualization workflow supplied for the study. It is
+region-neutral: no city identifier, region name, local computer path, satellite
+image, label polygon, or other training sample is embedded in the code.
 
-Repository:
-https://github.com/songwm0311/Global-South-Urban-Informal-Settlements-Data
+## Data availability and excluded files
 
-The main contents of the repository are described below.
+No regional training or validation samples are included in this archive.
+Original satellite imagery and third-party auxiliary datasets are not
+redistributed because the supplied repository description identifies licensing
+restrictions. Users must obtain authorized copies from the sources documented
+in the manuscript and Supporting Information and list their local paths in a
+manifest. The derived `Global South Urban Informal Settlements Data.xlsx` is a
+separate data product described by the study and is not fabricated or replaced
+by this code-only archive.
 
-1. Global South Urban Informal Settlements Data.xlsx
+Generated caches, execution logs, trained weights, and results are also
+excluded. In particular, `__pycache__/` and `nohup.out` are runtime artifacts,
+not source code required for reproduction.
 
-This file contains the primary derived dataset generated in this study. It provides city-level informal-settlement mapping results, uncertainty estimates, socioeconomic characteristics, and vulnerability indicators for 1,914 cities across 98 countries.
+## Input manifest
 
-The file includes:
+Copy `data_manifest.csv` and add one row per available city:
 
-(1) Urban and socioeconomic characteristics
+```text
+city_id,image_path,label_path
+<city identifier>,<10-band Sentinel-2 GeoTIFF>,<reference polygon Shapefile>
+```
 
-UrbanArea: urban extent of each city;
-POP: urban population;
-Pop.dens: population density;
-GDP and per GDP: economic indicators;
-Country, CountryName, Continental, and IncomeGroup: geographic and socioeconomic classifications.
+Paths may be absolute or relative to the manifest. The code does not prescribe
+or include any regional sample names. A Shapefile must retain its normal
+companion files (`.dbf`, `.shx`, `.prj`, and, where applicable, `.cpg`) in the
+same directory.
 
-These variables support the analysis of the socioeconomic context and regional differences in informal settlements.
+## Code organization
 
-(2) Predicted informal-settlement outputs
+- `models/`: U-Net architecture.
+- `train.py`: train and independently evaluate one manifest-selected outer fold.
+- `test_1.py`: load one checkpoint and generate a probability GeoTIFF.
+- `test_2.py`: run every manifest city as an independent outer test fold.
+- `load_model.py`: checkpoint loading.
+- `config_all.py`: preprocessing and model hyperparameters.
+- `dataloder_Pick.py`: patch loader and preprocessing interface (filename retained from the supplied description).
+- `nameList.py`: manifest validation and path management.
+- `loss/`: false-positive-aware BCE plus Tversky loss.
+- `utils/`: evaluation, raster output, UISI, and GLCM helpers.
+- `PLT_imshow.py`: raster visualization.
+- `plt_data.py`: city-metric visualization.
+- `workflow.py`, `preprocessing.py`, `training.py`, and `evaluation.py`: separated workflow implementation.
 
-The dataset provides the derived outputs from the trained deep-learning model, including:
+## UISI and GLCM formulas
 
-InformalArea: estimated informal-settlement area;
-InformalVolume: estimated informal-settlement building volume;
-BuildingVolume: total urban building volume;
-InformalHeight: estimated informal-settlement building height;
-ProInformalArea: proportion of informal settlements within urban areas;
-ProInformalVolume: proportion of informal settlements within urban building volume.
+UISI is calculated per pixel as:
 
-These variables are used for the global spatial distribution analysis of informal settlements presented in Fig. 1.
+`UISI = (B11 + B12 - 2*B7) / (B11 + B12 + 2*B7)`
 
-(3) Uncertainty estimates
+where B11, B12, and B7 represent SWIR1, SWIR2, and red-edge band 4. GLCM mean
+and variance follow the supplied probability-moment formulas and are calculated
+as local B8 texture maps. Because the supplied formula did not specify gray
+levels `k`, direction `d`, or distance `s`, these are explicit settings in
+`config_all.py` (defaults: 32 levels, one-pixel distance, 0-degree direction).
 
-The dataset includes uncertainty estimates generated through the Monte Carlo Dropout-based uncertainty quantification framework:
+## Installation and execution
 
-Std ProInformalArea: standard deviation of predicted informal-settlement area proportion;
-ProInformalArea CI lower: lower bound of the 95% confidence interval;
-ProInformalArea CI upper: upper bound of the 95% confidence interval;
-Std ProInformalVolume: uncertainty associated with informal-settlement volume proportion.
+The supplied notebook reports Python 3.10.19. Install the recorded direct
+dependency versions in a clean Python 3.10 environment:
 
-These variables represent uncertainty propagated from pixel-level settlement prediction to city-level settlement estimates and correspond to the uncertainty assessment described in the manuscript.
+```text
+python -m venv .venv
+.venv/Scripts/activate
+python -m pip install -r requirements.txt
+```
 
-(4) Vulnerability assessment variables
+Train and evaluate one outer fold:
 
-The dataset contains all indicators used to construct the Urban Informal Settlements Vulnerability Index (UISVI), including:
+```text
+python train.py --manifest /path/to/manifest.csv --test-city CITY_ID --output-dir results
+```
 
-Living Conditions Vulnerability (VIS1):
-GDP p.c.;
-population density;
-greening ratio;
-water quality;
-Vulnerability S1.
-Social Infrastructure Vulnerability (VIS2):
-electricity availability;
-road density;
-healthcare accessibility;
-school accessibility;
-Vulnerability S2.
-Environmental Risk Vulnerability (VIS3):
-heatwave exposure;
-flood risk;
-PM2.5 exposure;
-NO₂ exposure;
-Vulnerability S3.
-Integrated vulnerability index:
-Vulnerability: composite UISVI value.
+Run all manifest cities as outer test folds:
 
-These variables correspond to the vulnerability assessment framework and regional vulnerability comparisons presented in Figs. 2–3.
+```text
+python test_2.py --manifest /path/to/manifest.csv --output-dir results
+```
 
-2. Regional Training and Validation Datasets
+Run inference with one trained checkpoint:
 
-The repository contains regional sample datasets used for model training, validation, and regional performance evaluation.
+```text
+python test_1.py --manifest /path/to/manifest.csv --city CITY_ID --checkpoint MODEL.pth --output probability.tif
+```
 
-The available datasets include:
+## Outputs
 
-East Asia.zip
-South Asia.zip
-Southeast Asia.zip
-Middle Asia.zip
-West Asia.zip
-North Africa.zip
-SubSaharan Africa.zip
-Middle America.zip
-South America.zip
+For each independent test city the code writes model checkpoints, training
+history, OOF validation details, final metrics, run metadata, ensemble
+probability and standard deviation, raw and filtered predictions, ground truth,
+UISI, GLCM mean, and GLCM variance GeoTIFFs.
 
-Each regional dataset contains image samples and corresponding labels used for developing and evaluating the urban informal-settlement segmentation model.
+## Scope of reproducibility
 
-These datasets support the construction of training and validation samples described in the machine-learning pipeline.
+This archive implements the processing present in the supplied U-Net notebook
+plus the subsequently supplied UISI and GLCM formulas. The broader repository
+description additionally names city-level area/volume aggregation, Monte Carlo
+Dropout uncertainty, VIS1–VIS3, and UISVI. Their complete equations and source
+code were not present in the supplied notebook or formula image, so they are
+not invented here. The ensemble-member standard deviation produced by this
+workflow is not labeled as Monte Carlo Dropout uncertainty.
 
-3. Deep-learning Model and Training Codes
+Consequently, this deposit should be described as the segmentation-model code
+component of the broader repository, not as code that independently reconstructs
+every column in the derived spreadsheet.
 
-Model architecture
-
-The folder:
-
-models/
-
-contains the deep-learning model architectures used for urban informal-settlement segmentation.
-
-Training workflow
-
-The script:
-
-train.py
-
-implements model training, including model optimization, parameter updating, and training procedures.
-
-Model testing and inference
-
-The scripts:
-
-test_1.py
-test_2.py
-
-are used for model evaluation and prediction generation.
-
-The script:
-
-load_model.py
-
-provides functions for loading trained models and performing inference.
-
-Configuration and preprocessing
-
-The following files support model reproduction:
-
-config_all.py: model configuration and hyperparameter settings;
-dataloder_Pick.py: image patch loading and preprocessing;
-nameList.py: dataset organization and file management.
-
-4. Supporting Computational Functions
-
-The repository also includes supporting codes required for data processing and visualization.
-
-loss/: loss functions used during model optimization;
-utils/: auxiliary functions for model training, prediction, and data processing;
-PLT_imshow.py: visualization of input images and model outputs;
-plt_data.py: data visualization and plotting procedures.
-
-5. Documentation and Execution Records
-README.md provides repository descriptions, usage instructions, and workflow information.
-nohup.out contains execution logs generated during model runs.
-__pycache__/ contains automatically generated Python cache files.
-Reproducibility Statement
-
-The repository provides the essential data products and computational workflow required to reproduce the main analyses of this study, including:
-
-generation of urban informal-settlement predictions;
-estimation of city-level settlement extent and volume;
-Monte Carlo Dropout-based uncertainty quantification;
-construction of VIS1, VIS2, VIS3, and UISVI indicators;
-regional comparison of informal-settlement vulnerability patterns.
-
-Due to licensing restrictions, original satellite imagery and some third-party auxiliary datasets are not redistributed. However, their data sources, preprocessing procedures, and analytical methods are documented in the manuscript and Supporting Information.
