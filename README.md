@@ -92,7 +92,5 @@ code were not present in the supplied notebook or formula image, so they are
 not invented here. The ensemble-member standard deviation produced by this
 workflow is not labeled as Monte Carlo Dropout uncertainty.
 
-Consequently, this deposit should be described as the segmentation-model code
-component of the broader repository, not as code that independently reconstructs
-every column in the derived spreadsheet.
+
 
