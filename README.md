@@ -1,25 +1,8 @@
 # Global South Urban Informal Settlements — processing code
 
 This code-only deposit contains the U-Net preprocessing, training, inference,
-nested out-of-fold calibration, independent evaluation, UISI/GLCM feature
-calculation, and visualization workflow supplied for the study. It is
-region-neutral: no city identifier, region name, local computer path, satellite
-image, label polygon, or other training sample is embedded in the code.
+nested out-of-fold calibration, independent evaluation, and visualization workflow supplied for the study. 
 
-## Data availability and excluded files
-
-No regional training or validation samples are included in this archive.
-Original satellite imagery and third-party auxiliary datasets are not
-redistributed because the supplied repository description identifies licensing
-restrictions. Users must obtain authorized copies from the sources documented
-in the manuscript and Supporting Information and list their local paths in a
-manifest. The derived `Global South Urban Informal Settlements Data.xlsx` is a
-separate data product described by the study and is not fabricated or replaced
-by this code-only archive.
-
-Generated caches, execution logs, trained weights, and results are also
-excluded. In particular, `__pycache__/` and `nohup.out` are runtime artifacts,
-not source code required for reproduction.
 
 ## Input manifest
 
